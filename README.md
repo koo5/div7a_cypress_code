@@ -1,5 +1,5 @@
+cypress code to generate json files with ato calc inputs and its results. Python code to read the json and generate xml request/result pairs.
 
-*Dont store the data in the code repo, otherwise cypress will hang.*
 
 # cypress/e2e/1-getting-started/todo.cy.js
 ```
@@ -9,10 +9,15 @@ nvm install 20
 nvm use 20
 rm -rf node_modules/
 npm i
-npx cypress run --e2e  --no-runner-ui --headed
-#DISPLAY= DEBUG="*" npx cypress run -b firefox
+npx cypress run --e2e --no-runner-ui --headed
+# or maybe: DISPLAY= DEBUG="*" npx cypress run -b firefox
 
 ```
+
+* Dont store the data in the code repo, otherwise cypress will hang. *
+
+see also: https://docs.cypress.io/guides/references/troubleshooting
+
 
 # for the python side:
 ```

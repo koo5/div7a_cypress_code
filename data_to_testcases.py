@@ -44,7 +44,7 @@ def run():
 
 
 def process_testcase(f):
-		print(f)
+		#print(f)
 		#sys.stdout.write('.')
 
 		with open(f, 'r') as f:
@@ -89,12 +89,14 @@ def process_testcase(f):
 
 			field('Income year of loan creation', income_year_of_loan_creation)
 			field('Full term of loan in years', full_term_of_loan_in_years)
-			#field('Principal amount of loan', principal_amount_of_loan)
 			if lodgement_day_of_private_company is not None:
 				field('Lodgement day of private company', ato_date_to_xml(lodgement_day_of_private_company))
 			field('Income year of computation', income_year_of_computation)
+
+			# maybe we could generate some testcases with principal rather than opening balance tag, it will mean the same thing.
 			field('Opening balance of computation', opening_balance)
-			
+			#field('Principal amount of loan', opening_balance)
+
 			for r in j['repayments']:
 				repayment = repayments.appendChild(doc.createElement('repayment'))
 				repayment.setAttribute('date', ato_date_to_xml(r['rd']))
@@ -128,26 +130,39 @@ def process_testcase(f):
 			enquiryYearEndDisplay = j['outputs']['enquiryYearEndDisplay']
 			xxx = j['alert'].split('$')
 			
-			ClosingBalance = xxx[-1]
-			expected = f"""\n\nClosing balance\n\nDate: {enquiryYearEndDisplay}\n\nBalance: ${ClosingBalance}"""
+			ClosingBalance = '$' + xxx[-1]
+			expected = f"""\n\nClosing balance\n\nDate: {enquiryYearEndDisplay}\n\nBalance: {ClosingBalance}"""
 			
 			if not j['alert'].endswith(expected):
 				raise Exception(f"""unexpected alert format, expected: {expected}, got: {j['alert']}""")
 
 			loanAmountFormatted = j['outputs'].get('loanAmountFormatted')  
 			if loanAmountFormatted is not None:
+				#print(f'loanAmountFormatted: {loanAmountFormatted}')
 				if loanAmountFormatted != ClosingBalance:
-					raise Exception(f"""kinda thought that loanAmountFormatted == ClosingBalance""")
+					raise Exception(f"""kinda thought that loanAmountFormatted == ClosingBalance: {loanAmountFormatted} vs {ClosingBalance}""")
+
+			principal_str = ato_monetary_to_float_str(j['outputs']['principalFormatted'])
+			principal = float(principal_str)
+			if principal > opening_balance:
+				overpayment = principal - opening_balance
+				print(f'overpayment: {principal - opening_balance}')
+			else:
+				overpayment = None
+				
 			
-			add('IncomeYear'		, income_year_of_computation)
-			add('OpeningBalance'	, opening_balance)
-			add('InterestRate'		, j['outputs']['enquiryRateFormatted'][:-1])
-			add('MinYearlyRepayment', minimumYearRepayment)
-			add('TotalRepayment'	, totalAmountOfRepayment) # note that all the ato calculations are only for one year, while our calc would sum up all calculations across all years, if provided 	
-			add('RepaymentShortfall', shortfall)
-			add('TotalInterest'		, ato_monetary_to_float_str(j['outputs']['totalInterestFormatted']))
-			add('TotalPrincipal'	, ato_monetary_to_float_str(j['outputs']['principalFormatted']))
-			add('ClosingBalance'	, ato_monetary_to_float_str(ClosingBalance))
+			add('IncomeYear'			, income_year_of_computation);
+			add('OpeningBalance'		, opening_balance);
+			add('InterestRate'			, j['outputs']['enquiryRateFormatted'][:-1]);
+			add('MinYearlyRepayment'	, minimumYearRepayment);
+			add('TotalRepayment'		, totalAmountOfRepayment) # note that all the ato calculations are only for one year, while robust calc would sum up all repayments across all years, if provided 	
+			add('RepaymentShortfall'	, shortfall);
+			add('TotalInterest'		, ato_monetary_to_float_str(j['outputs']['totalInterestFormatted']));
+			add('TotalPrincipal'		, principal_str); # only reason to use the _str is to not change too much at once here, float would be fine.
+			add('ClosingBalance'		, ato_monetary_to_float_str(ClosingBalance));
+			if overpayment is not None:
+				root.appendChild(doc.createComment(f'overpayment: {overpayment}'))
+				add('Overpayment'		, overpayment);
 			
 			with open(response_fn, 'w') as f:
 				f.write(doc.toprettyxml(indent=''))
