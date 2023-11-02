@@ -162,7 +162,7 @@ def process_testcase(f):
 			add('ClosingBalance'		, ato_monetary_to_float_str(ClosingBalance));
 			if overpayment is not None:
 				root.appendChild(doc.createComment(f'overpayment: {overpayment}'))
-				add('Overpayment'		, overpayment);
+				#add('Overpayment'		, overpayment);
 			
 			with open(response_fn, 'w') as f:
 				f.write(doc.toprettyxml(indent=''))
