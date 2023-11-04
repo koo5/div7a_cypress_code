@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+import io
 import json, os, sys, datetime, random, requests
 from datetime import timedelta, date
 from xml.etree.ElementTree import canonicalize, fromstring, tostring
@@ -7,6 +7,12 @@ from xml.etree.ElementTree import canonicalize, fromstring, tostring
 from utils import python_date_to_xml
 
 random.seed(0)
+
+
+requests_session = requests.Session()
+requests_adapter = requests.adapters.HTTPAdapter(max_retries=5)
+requests_session.mount('http://', requests_adapter)
+requests_session.mount('https://', requests_adapter)
 
 
 from xml.dom import minidom
@@ -20,7 +26,18 @@ from utils import *
 def single_step_request(loan_year, full_term, lodgement_date, ob, repayments, enquiry_year):
 	x = request_xml(loan_year, full_term, lodgement_date, ob, repayments, enquiry_year)
 	s = x.toprettyxml(indent='\t')
-	return requests.post('http://localhost:8877/upload?requested_output_format=immediate_xml', data=s).text
+
+	robust_server_url = 'http://localhost:8877'
+
+	file1=io.StringIO(s)
+	file1.name='request.xml'
+	files = dict(file1=file1)
+
+	return requests_session.post(
+			f'{robust_server_url}/upload',
+			params={'request_format':'xml', 'requested_output_format': 'immediate_xml'},
+			files=files
+	).text
 
 
 
@@ -53,13 +70,13 @@ def run():
 				print(last_step_result_xml_text)
 				step = fromstring(last_step_result_xml_text)
 
-				cb2 = float(step.find('closing_balance').text)
+				cb2 = float(step.find('ClosingBalance').text)
 						
 				if cb2 >= cb:
 					raise 'hmm'
 				cb = cb2
 
-				if float(step.find('shortfall').text) != 0:
+				if float(step.find('Shortfall').text) != 0:
 					break
 				if cb == 0:
 					break
